@@ -1,0 +1,6 @@
+[submodule "hardware-video-encoder"]
+	path = hardware-video-encoder
+	url = https://github.com/bmegli/hardware-video-encoder.git
+[submodule "minimal-latency-streaming-protocol"]
+	path = minimal-latency-streaming-protocol
+	url = https://github.com/bmegli/minimal-latency-streaming-protocol.git
