@@ -8,11 +8,11 @@ project(
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # compile dependencies as static libraries
-add_library(hve hardware-video-encoder/hve.c)
-add_library(mlsp minimal-latency-streaming-protocol/mlsp.c)
+add_subdirectory(hardware-video-encoder)
+add_subdirectory(minimal-latency-streaming-protocol)
 
 # this is our main target
-add_library(nhve SHARED nhve.c)
+add_library(nhve STATIC nhve.c)
 target_include_directories(nhve PRIVATE hardware-video-encoder)
 target_include_directories(nhve PRIVATE minimal-latency-streaming-protocol)
 
