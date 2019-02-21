@@ -1,7 +1,7 @@
 # NHVE Network Hardware Video Encoder C library
 
 Library for hardware video encoding and streaming over custom [MLSP](https://github.com/bmegli/minimal-latency-streaming-protocol) protocol.
-See also twin [NHVD](https://github.com/bmegli/network-hardware-video-decoder network decoder).
+See also twin [NHVD](https://github.com/bmegli/network-hardware-video-decoder) network decoder.
 
 The intent behind library:
 - minimize video latency
@@ -19,7 +19,8 @@ Tested on Ubuntu 18.04.
 
 ## Hardware
 
-Intel VAAPI compatible hardware encoders ([Quick Sync Video](https://ark.intel.com/Search/FeatureFilter?productType=processors&QuickSyncVideo=true))
+Intel VAAPI compatible hardware encoders ([Quick Sync Video](https://ark.intel.com/Search/FeatureFilter?productType=processors&QuickSyncVideo=true)).
+
 ATI/AMD may also work through VAAPI (libva-mesa-driver, not tested however).
 
 The dependency is through [HVE](https://github.com/bmegli/hardware-video-encoder) implementation (see [HVE issues](https://github.com/bmegli/hardware-video-encoder/issues/5)).
@@ -159,4 +160,4 @@ Since you are linking to FFmpeg libraries consider also `avcodec` and `avutil` l
 
 ### Library uses
 
-Realsense D400 invrared and color H.264 streaming - [realsense-network-hardware-video-encoder](https://github.com/bmegli/realsense-network-hardware-video-encoder)
+Realsense D400 infrared and color H.264 streaming - [realsense-network-hardware-video-encoder](https://github.com/bmegli/realsense-network-hardware-video-encoder)
