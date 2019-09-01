@@ -1,7 +1,10 @@
 # NHVE Network Hardware Video Encoder C library
 
 Library for hardware video encoding and streaming over custom [MLSP](https://github.com/bmegli/minimal-latency-streaming-protocol) protocol.
+
 See also twin [NHVD](https://github.com/bmegli/network-hardware-video-decoder) network decoder.
+
+See [hardware-video-streaming](https://github.com/bmegli/hardware-video-streaming) for other related projects.
 
 The intent behind library:
 - minimize video latency
