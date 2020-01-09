@@ -96,7 +96,7 @@ See [HVE](https://github.com/bmegli/hardware-video-encoder) docs for details abo
 	//prepare library data
 	struct nhve_net_config net_config = {IP, PORT};
 	struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE,
-					DEVICE, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE};
+		DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE};
 	//initialize
 	struct nhve *streamer = nhve_init(&net_config, &hw_config);
 	
