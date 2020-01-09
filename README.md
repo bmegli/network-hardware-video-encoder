@@ -69,18 +69,20 @@ make
 
 ## Running example
 
-Stream procedurally generated H.264 video over UDP (moving through greyscale)
+Stream procedurally generated H.264/HEVC video over UDP (moving through greyscale)
 
 ```bash
-# Usage: ./nhve-stream-h264 <ip> <port> <seconds> [device]
+# Usage: ./nhve-stream-h* <ip> <port> <seconds> [device]
 ./nhve-stream-h264 127.0.0.1 9766 10
+./nhve-stream-hevc10 127.0.0.1 9766 10
 ```
 
 You may need to specify VAAPI device if you have more than one (e.g. NVIDIA GPU + Intel CPU).
 
 ```bash
-# Usage: ./nhve-stream-h264 <ip> <port> <seconds> [device]
+# Usage: ./nhve-stream-h* <ip> <port> <seconds> [device]
 ./nhve-stream-h264 127.0.0.1 9766 10 /dev/dri/renderD128 #or D129
+./nhve-stream-hevc10 127.0.0.1 9766 10 /dev/dri/renderD128 #or D129
 ```
 
 If you don't have receiving end you will just see if hardware encoding worked/didn't work.
