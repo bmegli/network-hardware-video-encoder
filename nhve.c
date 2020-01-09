@@ -1,7 +1,7 @@
 /*
  * NHVE Network Hardware Video Encoder C library implementation
  *
- * Copyright 2019 (C) Bartosz Meglicki <meglickib@gmail.com>
+ * Copyright 2019-2020 (C) Bartosz Meglicki <meglickib@gmail.com>
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -31,7 +31,7 @@ struct nhve *nhve_init(const struct nhve_net_config *net_config,const struct nhv
 	struct nhve *n, zero_nhve = {0};
 	struct mlsp_config mlsp_cfg = {net_config->ip, net_config->port, 0};
 	struct hve_config hve_cfg = {hw_config->width, hw_config->height, hw_config->framerate, hw_config->device,
-		hw_config->pixel_format, hw_config->profile, hw_config->max_b_frames, hw_config->bit_rate};
+		hw_config->encoder, hw_config->pixel_format, hw_config->profile, hw_config->max_b_frames, hw_config->bit_rate};
 
 	if( ( n = (struct nhve*)malloc(sizeof(struct nhve))) == NULL )
 	{

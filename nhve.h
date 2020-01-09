@@ -1,7 +1,7 @@
 /*
  * NHVE Network Hardware Video Encoder C library header
  *
- * Copyright 2019 (C) Bartosz Meglicki <meglickib@gmail.com>
+ * Copyright 2019-2020 (C) Bartosz Meglicki <meglickib@gmail.com>
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -28,6 +28,7 @@ struct nhve_hw_config
 	int height; //!< height of the encoded frames
 	int framerate; //!< framerate of the encoded video
 	const char *device; //!< NULL / "" or device, e.g. "/dev/dri/renderD128"
+	const char *encoder; //!< NULL / "" or encoder, e.g. "h264_vaapi"
 	const char *pixel_format; //!< NULL / "" for NV12 or format, e.g. "rgb0", "bgr0", "nv12", "yuv420p"
 	int profile; //!< 0 to guess from input or profile e.g. FF_PROFILE_H264_MAIN, FF_PROFILE_H264_HIGH
 	int max_b_frames; //!< maximum number of B-frames between non-B-frames (disable if you need low latency)

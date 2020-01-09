@@ -23,6 +23,7 @@ const int HEIGHT=360;
 const int FRAMERATE=30;
 int SECONDS=10;
 const char *DEVICE; //NULL for default or device e.g. "/dev/dri/renderD128"
+const char *ENCODER=NULL;//NULL for default (h264_vaapi) or FFmpeg encoder e.g. "hevc_vaapi", ...
 const char *PIXEL_FORMAT="nv12"; //NULL / "" for default (NV12) or pixel format e.g. "rgb0"
 const int PROFILE=FF_PROFILE_H264_HIGH; //or FF_PROFILE_H264_MAIN, FF_PROFILE_H264_CONSTRAINED_BASELINE, ...
 const int BFRAMES=0; //max_b_frames, set to 0 to minimize latency, non-zero to minimize size
@@ -43,7 +44,7 @@ int main(int argc, char* argv[])
 
 	//prepare library data
 	struct nhve_net_config net_config = {IP, PORT};
-	struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE, DEVICE, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE};
+	struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE};
 	struct nhve *streamer;
 
 	//initialize library with nhve_init
