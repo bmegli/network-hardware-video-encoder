@@ -18,6 +18,9 @@
 
 #include <stdio.h>
 
+//benchmark related
+#include <time.h> //clock_gettime
+
 struct nhve
 {
 	struct mlsp *network_streamer;
@@ -72,6 +75,7 @@ void nhve_close(struct nhve *n)
 int nhve_send_frame(struct nhve *n,struct nhve_frame *frame)
 {
 	struct hve_frame *final_video_frame = NULL, video_frame;
+	struct timespec start, upload, encode_download;
 
 	// NULL is also valid input meaning - flush the encoder
 	if(frame != NULL)
@@ -81,6 +85,8 @@ int nhve_send_frame(struct nhve *n,struct nhve_frame *frame)
 		final_video_frame = &video_frame;
 	}
 
+	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+
 	// send video frame data to hardware for encoding
 	// in case frame argument was NULL pass NULL here for flushing encoder
 	if( hve_send_frame(n->hardware_encoder, final_video_frame) != HVE_OK)
@@ -89,12 +95,17 @@ int nhve_send_frame(struct nhve *n,struct nhve_frame *frame)
 		return NHVE_ERROR;
 	}
 
+	clock_gettime(CLOCK_MONOTONIC_RAW, &upload);
+
+
 	AVPacket *encoded_frame;
 	int failed;
 
 	//get the encoded frame data from hardware
 	while( (encoded_frame=hve_receive_packet(n->hardware_encoder, &failed)) )
 	{
+		clock_gettime(CLOCK_MONOTONIC_RAW, &encode_download);
+
 		struct mlsp_frame network_frame = {frame->framenumber, encoded_frame->data, encoded_frame->size};
 		//send encoded frame data over network
 		if ( mlsp_send(n->network_streamer, &network_frame) != MLSP_OK )
@@ -110,6 +121,11 @@ int nhve_send_frame(struct nhve *n,struct nhve_frame *frame)
 		fprintf(stderr, "nhve: failed to encode frame\n");
 		return NHVE_ERROR;
 	}
+
+	double up_time_ms = (upload.tv_nsec - start.tv_nsec) / 1000000.0;
+	double up_enc_down_time_ms = (encode_download.tv_nsec - start.tv_nsec) / 1000000.0;
+
+	printf("Uploaded in %f ms, up/enc/down in %f ms\n", up_time_ms, up_enc_down_time_ms);
 
 	return NHVE_OK;
 }
