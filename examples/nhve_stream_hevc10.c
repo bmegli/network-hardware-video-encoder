@@ -28,6 +28,7 @@ const char *PIXEL_FORMAT="p010le"; //NULL for default (nv12) or pixel format e.g
 const int PROFILE=FF_PROFILE_HEVC_MAIN_10; //or FF_PROFILE_HEVC_MAIN, ...
 const int BFRAMES=0; //max_b_frames, set to 0 to minimize latency, non-zero to minimize size
 const int BITRATE=0; //average bitrate in VBR
+const int GOP_SIZE=0; //group of pictures size, 0 for default (determines keyframe period)
 
 //IP, PORT, SECONDS and DEVICE are read from user input
 
@@ -44,7 +45,8 @@ int main(int argc, char* argv[])
 
 	//prepare library data
 	struct nhve_net_config net_config = {IP, PORT};
-	struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE};
+	struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER,
+					PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE, GOP_SIZE};
 	struct nhve *streamer;
 
 	//initialize library with nhve_init

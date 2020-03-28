@@ -33,6 +33,7 @@ struct nhve_hw_config
 	int profile; //!< 0 to guess from input or profile e.g. FF_PROFILE_H264_MAIN, FF_PROFILE_H264_HIGH
 	int max_b_frames; //!< maximum number of B-frames between non-B-frames (disable if you need low latency)
 	int bit_rate; //!< the average bitrate in VBR mode
+	int gop_size; //!<  group of pictures size, 0 for default, -1 for intra only
 };
 
 struct nhve_net_config
