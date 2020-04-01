@@ -32,7 +32,8 @@ struct nhve_hw_config
 	const char *pixel_format; //!< NULL / "" for NV12 or format, e.g. "rgb0", "bgr0", "nv12", "yuv420p"
 	int profile; //!< 0 to guess from input or profile e.g. FF_PROFILE_H264_MAIN, FF_PROFILE_H264_HIGH
 	int max_b_frames; //!< maximum number of B-frames between non-B-frames (disable if you need low latency)
-	int bit_rate; //!< the average bitrate in VBR mode
+	int bit_rate; //!< average bitrate in VBR mode (bit_rate != 0 and qp == 0)
+	int qp; //!< quantization parameter in CQP mode (qp != 0 and bit_rate == 0)
 	int gop_size; //!<  group of pictures size, 0 for default, -1 for intra only
 };
 
