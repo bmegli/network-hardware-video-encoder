@@ -32,7 +32,7 @@ struct nhve *nhve_init(const struct nhve_net_config *net_config,const struct nhv
 	struct mlsp_config mlsp_cfg = {net_config->ip, net_config->port, 0};
 	struct hve_config hve_cfg = {hw_config->width, hw_config->height, hw_config->framerate, hw_config->device,
 		hw_config->encoder, hw_config->pixel_format, hw_config->profile,
-		hw_config->max_b_frames, hw_config->bit_rate, hw_config->qp, hw_config->gop_size};
+		hw_config->max_b_frames, hw_config->bit_rate, hw_config->qp, hw_config->gop_size, hw_config->compression_level};
 
 	if( ( n = (struct nhve*)malloc(sizeof(struct nhve))) == NULL )
 	{

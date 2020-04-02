@@ -35,6 +35,7 @@ struct nhve_hw_config
 	int bit_rate; //!< average bitrate in VBR mode (bit_rate != 0 and qp == 0)
 	int qp; //!< quantization parameter in CQP mode (qp != 0 and bit_rate == 0)
 	int gop_size; //!<  group of pictures size, 0 for default, -1 for intra only
+	int compression_level; //!< speed-quality tradeoff, 0 for default, 1 for the highest quality, 7 for the fastest
 };
 
 struct nhve_net_config
