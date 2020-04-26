@@ -1,5 +1,6 @@
 /*
- * NHVE Network Hardware Video Encoder library example of streaming H.264
+ * NHVE Network Hardware Video Encoder library example of
+ * streaming with multiple simultanous hardware encoders
  *
  * Copyright 2019-2020 (C) Bartosz Meglicki <meglickib@gmail.com>
  *
@@ -27,7 +28,8 @@ const char *ENCODER=NULL;//NULL for default (h264_vaapi) or FFmpeg encoder e.g. 
 const char *PIXEL_FORMAT="nv12"; //NULL / "" for default (NV12) or pixel format e.g. "rgb0"
 const int PROFILE=FF_PROFILE_H264_HIGH; //or FF_PROFILE_H264_MAIN, FF_PROFILE_H264_CONSTRAINED_BASELINE, ...
 const int BFRAMES=0; //max_b_frames, set to 0 to minimize latency, non-zero to minimize size
-const int BITRATE=0; //average bitrate in VBR mode (bit_rate != 0 and qp == 0)
+const int BITRATE1=500000; //average bitrate in VBR mode (bit_rate != 0 and qp == 0)
+const int BITRATE2=2000000; //average bitrate in VBR mode (bit_rate != 0 and qp == 0)
 const int QP=0; //quantization parameter in CQP mode (qp != 0 and bit_rate == 0)
 const int GOP_SIZE=0; //group of pictures size, 0 for default (determines keyframe period)
 const int COMPRESSION_LEVEL=0; //speed-quality tradeoff, 0 for default, 1 for the highest quality, 7 for the fastest
@@ -47,12 +49,17 @@ int main(int argc, char* argv[])
 
 	//prepare library data
 	struct nhve_net_config net_config = {IP, PORT};
-	struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER,
-			PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE, QP, GOP_SIZE, COMPRESSION_LEVEL};
+	
+	struct nhve_hw_config hw_config[2] = 
+	{  //those could be completely different encoders using different hardware, here just different bitrate
+		{WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE1, QP, GOP_SIZE, COMPRESSION_LEVEL},
+		{WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE2, QP, GOP_SIZE, COMPRESSION_LEVEL}
+	};
+
 	struct nhve *streamer;
 
-	//initialize library with nhve_init
-	if( (streamer = nhve_init(&net_config, &hw_config, 1)) == NULL )
+	//initialize library with nhve_multi_init
+	if( (streamer = nhve_init(&net_config, hw_config, 2)) == NULL )
 		return hint_user_on_failure(argv);
 
 	//do the actual encoding
@@ -68,31 +75,40 @@ int main(int argc, char* argv[])
 
 int streaming_loop(struct nhve *streamer)
 {
-	struct nhve_frame frame = { 0 };
-	int frames=SECONDS*FRAMERATE, f;
+	const int TOTAL_FRAMES = SECONDS*FRAMERATE;
 	const useconds_t useconds_per_frame = 1000000/FRAMERATE;
+	int f;
+	struct nhve_frame frames[2] = { 0 };
+	
 
-	//we are working with NV12 because we specified nv12 pixel format
-	//when calling nhve_init, in principle we could use other format
+	//we are working with NV12 because we specified nv12 pixel formats
+	//when calling nhve_multi_init, in principle we could use other format
 	//if hardware supported it (e.g. RGB0 is supported on my Intel)
-	uint8_t Y[WIDTH*HEIGHT]; //dummy NV12 luminance data
-	uint8_t color[WIDTH*HEIGHT/2]; //dummy NV12 color data
+	uint8_t Y1[WIDTH*HEIGHT]; //dummy NV12 luminance data for encoder 1
+	uint8_t Y2[WIDTH*HEIGHT]; //                          for encoder 2
+
+	uint8_t color[WIDTH*HEIGHT/2]; //same dummy NV12 color data for both encoders
 
 	//fill with your stride (width including padding if any)
-	frame.linesize[0] = frame.linesize[1] = WIDTH;
+	frames[0].linesize[0] = frames[1].linesize[0] = WIDTH; //Y planes stride
+	frames[0].linesize[1] = frames[1].linesize[1] = WIDTH; //UV planes stride 
 
-	for(f=0;f<frames;++f)
+	for(f=0;f<TOTAL_FRAMES;++f)
 	{
-		//prepare dummy image date, normally you would take it from camera or other source
-		memset(Y, f % 255, WIDTH*HEIGHT); //NV12 luminance (ride through greyscale)
+		//prepare dummy images data, normally you would take it from cameras or other source
+		memset(Y1, f % 255, WIDTH*HEIGHT); //NV12 luminance (ride through greyscale)
+		memset(Y2, 255 - (f % 255), WIDTH*HEIGHT); //NV12 luminance (reverse ride through greyscale)
 		memset(color, 128, WIDTH*HEIGHT/2); //NV12 UV (no color really)
 
-		//fill hve_frame with pointers to your data in NV12 pixel format
-		frame.data[0]=Y;
-		frame.data[1]=color;
+		//fill nhve_frame with pointers to your data in NV12 pixel format
+		frames[0].data[0]=Y1;
+		frames[0].data[1]=color;
+
+		frames[1].data[0]=Y2;
+		frames[1].data[1]=color;
 		
 		//encode and send this frame, the framenumber f has to increase
-		if(nhve_send(streamer, f, &frame) != NHVE_OK)
+		if(nhve_send(streamer, f, frames) != NHVE_OK)
 			break; //break on error
 
 		//simulate real time source (sleep according to framerate)
@@ -104,7 +120,7 @@ int streaming_loop(struct nhve *streamer)
 
 	//did we encode everything we wanted?
 	//convention 0 on success, negative on failure
-	return f == frames ? 0 : -1;
+	return f == TOTAL_FRAMES ? 0 : -1;
 }
 
 int process_user_input(int argc, char* argv[])

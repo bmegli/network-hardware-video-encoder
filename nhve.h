@@ -46,7 +46,6 @@ struct nhve_net_config
 
 struct nhve_frame
 {
-	uint16_t framenumber;
 	uint8_t *data[AV_NUM_DATA_POINTERS]; //!< array of pointers to frame planes (e.g. Y plane and UV plane)
 	int linesize[AV_NUM_DATA_POINTERS]; //!< array of strides (width + padding) for planar frame formats
 };
@@ -58,12 +57,17 @@ enum nhve_retval_enum
 };
 
 //NULL on error, non NULL on success
-struct nhve *nhve_init(const struct nhve_net_config *net_config, const struct nhve_hw_config *hw_config);
+struct nhve *nhve_init(const struct nhve_net_config *net_config, const struct nhve_hw_config *hw_config, int hw_size);
+
 void nhve_close(struct nhve *n);
 
 //NHVE_OK on success, NHVE_ERROR on error
-//pass NULL frame to flush encoder
-int nhve_send_frame(struct nhve *n,struct nhve_frame *frame);
+
+//NULL frames to flush all encoders
+//NULL frames[i].data[0] is legal, silently skipped and will not flush the encoder
+//this is necessary to support e.g. different framerates or B frames
+int nhve_send(struct nhve *n, uint16_t framenumber, struct nhve_frame *frames);
+
 
 #ifdef __cplusplus
 }

@@ -9,6 +9,7 @@ See [hardware-video-streaming](https://github.com/bmegli/hardware-video-streamin
 The intent behind library:
 - minimize video latency
 - minimize CPU usage (hardware encoding and color conversions)
+- multi-frame streaming (e.g. depth + texture)
 - simple user interface
 
 If you have no specific needs you should start with gstreamer or FFmpeg command line streaming instead.
@@ -22,7 +23,7 @@ Tested on Ubuntu 18.04.
 
 ## Hardware
 
-Intel VAAPI compatible hardware encoders ([Quick Sync Video](https://ark.intel.com/Search/FeatureFilter?productType=processors&QuickSyncVideo=true)).
+Intel VAAPI compatible hardware encoders (Quick Sync Video).
 
 ATI/AMD may also work through VAAPI (libva-mesa-driver, not tested however).
 
@@ -75,6 +76,7 @@ Stream procedurally generated H.264/HEVC video over UDP (moving through greyscal
 # Usage: ./nhve-stream-h* <ip> <port> <seconds> [device]
 ./nhve-stream-h264 127.0.0.1 9766 10
 ./nhve-stream-hevc10 127.0.0.1 9766 10
+./nhve-stream-multi 127.0.0.1 9766 10
 ```
 
 You may need to specify VAAPI device if you have more than one (e.g. NVIDIA GPU + Intel CPU).
@@ -83,60 +85,66 @@ You may need to specify VAAPI device if you have more than one (e.g. NVIDIA GPU 
 # Usage: ./nhve-stream-h* <ip> <port> <seconds> [device]
 ./nhve-stream-h264 127.0.0.1 9766 10 /dev/dri/renderD128 #or D129
 ./nhve-stream-hevc10 127.0.0.1 9766 10 /dev/dri/renderD128 #or D129
+./nhve-stream-multi 127.0.0.1 9766 10 /dev/dri/renderD128 #or D129
 ```
 
-If you don't have receiving end you will just see if hardware encoding worked/didn't work.
+If you don't have receiving end you will just see if hardware encoding worked.
+
+If you get errors see also HVE [troubleshooting](https://github.com/bmegli/hardware-video-encoder/wiki/Troubleshooting).
 
 ## Using
 
-See examples directory for a more complete and commented examples with error handling.
+See examples directory for more complete and commented examples with error handling.
 
 See [HVE](https://github.com/bmegli/hardware-video-encoder) docs for details about hardware configuration.
 
 
 ```C
-	//prepare library data
-	struct nhve_net_config net_config = {IP, PORT};
-	struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER,
-		PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE, QP, GOP_SIZE, COMPRESSION_LEVEL};
-	//initialize
-	struct nhve *streamer = nhve_init(&net_config, &hw_config);
-	
-	struct nhve_frame frame = { 0 };
+//prepare library data
+struct nhve_net_config net_config = {IP, PORT};
+struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER,
+	PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE, QP, GOP_SIZE, COMPRESSION_LEVEL};
+//initialize single hardware encoder
+struct nhve *streamer = nhve_init(&net_config, &hw_config, 1);
 
-	//later assuming PIXEL_FORMAT is "nv12" (you can use something else)
+struct nhve_frame frame = { 0 };
 
-	//fill with your stride (width including padding if any)
-	frame.linesize[0] = frame.linesize[1] = WIDTH;
+//later assuming PIXEL_FORMAT is "nv12" (you can use something else)
 
+//fill with your stride (width including padding if any)
+frame.linesize[0] = frame.linesize[1] = WIDTH;
+
+//...
+//whatever logic you have to prepare data source
+//..
+
+while(keep_streaming)
+{
 	//...
-	//whatever logic you have to prepare data source
-	//..
+	//update NV12 Y and color data (e.g. get them from camera)
+	//...
 
-	while(keep_streaming)
-	{
-		//...
-		//update NV12 Y and color data (e.g. get them from camera)
-		//...
-
-		//fill nhve_frame with increasing framenumber and
-		//pointers to your data in NV12 pixel format
-		frame.framenumber=framenumber++; //dummy framenumber
-		frame.data[0]=Y; //dummy luminance plane
-		frame.data[1]=color; //dummy UV plane
-		
-		//encode and send this frame
-		if( nhve_send_frame(streamer, &frame) != NHVE_OK)
-			break; //break on error
-	}
-
-	//flush the streamer by sending NULL frame
-	nhve_send_frame(streamer, NULL);
+	//fill nhve_frame with increasing framenumber and
+	//pointers to your data in NV12 pixel format
+	frame.data[0]=Y; //dummy luminance plane
+	frame.data[1]=color; //dummy UV plane
 	
-	nhve_close(streamer);
+	//encode and send this frame
+	if( nhve_send(streamer, framenumber++, &frame) != NHVE_OK)
+		break; //break on error
+}
+
+//flush the streamer by sending NULL frame
+nhve_send(streamer, framenumber, NULL);
+
+nhve_close(streamer);
 ```
 
 That's it! You have just seen all the functions and data types in the library.
+
+The same interface works for multi-frame streaming with:
+- array of hardware configurations in `nhve_init`
+- array of frames in `nhve_send`
 
 ## Compiling your code
 
@@ -165,4 +173,4 @@ Since you are linking to FFmpeg libraries consider also `avcodec` and `avutil` l
 
 ### Library uses
 
-Realsense D400 infrared and color H.264 streaming - [realsense-network-hardware-video-encoder](https://github.com/bmegli/realsense-network-hardware-video-encoder)
+Realsense D400 infrared/color H.264 and infrared/color/depth HEVC streaming - [realsense-network-hardware-video-encoder](https://github.com/bmegli/realsense-network-hardware-video-encoder)

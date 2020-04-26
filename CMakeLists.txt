@@ -26,4 +26,6 @@ target_link_libraries(nhve-stream-h264 nhve)
 add_executable(nhve-stream-hevc10 examples/nhve_stream_hevc10.c)
 target_link_libraries(nhve-stream-hevc10 nhve)
 
+add_executable(nhve-stream-multi examples/nhve_stream_multi.c)
+target_link_libraries(nhve-stream-multi nhve)
 

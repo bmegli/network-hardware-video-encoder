@@ -1,7 +1,7 @@
 /*
  * NHVE Network Hardware Video Encoder library example of streaming H.264
  *
- * Copyright 2019 (C) Bartosz Meglicki <meglickib@gmail.com>
+ * Copyright 2019-2020 (C) Bartosz Meglicki <meglickib@gmail.com>
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 	struct nhve *streamer;
 
 	//initialize library with nhve_init
-	if( (streamer = nhve_init(&net_config, &hw_config)) == NULL )
+	if( (streamer = nhve_init(&net_config, &hw_config, 1)) == NULL )
 		return hint_user_on_failure(argv);
 
 	//do the actual encoding
@@ -94,11 +94,8 @@ int streaming_loop(struct nhve *streamer)
 		frame.data[0] = (uint8_t*)Y;
 		frame.data[1] = (uint8_t*)color;
 
-		//increase the framenumber, this is mandatory for the network protocol
-		frame.framenumber = f;
-
-		//encode and send this frame
-		if( nhve_send_frame(streamer, &frame) != NHVE_OK)
+		//encode and send this frame, the framenumber f has to increase
+		if(nhve_send(streamer, f, &frame) != NHVE_OK)
 			break; //break on error
 
 		//simulate real time source (sleep according to framerate)
@@ -106,7 +103,7 @@ int streaming_loop(struct nhve *streamer)
 	}
 
 	//flush the encoder by sending NULL frame, encode some last frames returned from hardware
-	nhve_send_frame(streamer, NULL);
+	nhve_send(streamer, f, NULL);
 
 	//did we encode everything we wanted?
 	//convention 0 on success, negative on failure
