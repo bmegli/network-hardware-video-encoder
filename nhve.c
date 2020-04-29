@@ -18,6 +18,10 @@
 
 #include <stdio.h>
 
+//benchmark related
+#include <time.h> //clock_gettime
+
+
 enum NHVE_COMPILE_TIME_CONSTANTS
 {
 	NHVE_MAX_ENCODERS=3, //!< max number of encoders in multi encoding
@@ -93,6 +97,10 @@ int nhve_send(struct nhve *n, uint16_t framenumber, struct nhve_frame *frames)
 	struct hve_frame video_frames[NHVE_MAX_ENCODERS] = {0};
 	const int encoders = n->hardware_encoders_size;
 
+	struct timespec start, encode, encode_send;
+
+	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+
 	if(frames) //NULL frames is valid input - flush the encoders
 		for(int i=0;i<encoders;++i)
 		{	//copy pointers to data and linesizes (just a few bytes)
@@ -133,15 +141,24 @@ int nhve_send(struct nhve *n, uint16_t framenumber, struct nhve_frame *frames)
 				keep_working = 1; //some encoder still produces output
 			}
 
+		clock_gettime(CLOCK_MONOTONIC_RAW, &encode);
+
 		if(keep_working && (mlsp_send(n->network_streamer, &network_frame) != MLSP_OK) )
 			return NHVE_ERROR_MSG("failed to send frame");
 
 	} while(keep_working);
 
+	clock_gettime(CLOCK_MONOTONIC_RAW, &encode_send);
+
 	//NULL packet and non-zero failed indicates failure during encoding
 	for(int i=0;i<encoders;++i)
 		if(failed[i] != HVE_OK)
 			return NHVE_ERROR_MSG("failed to encode frame");
+
+	double encode_ms = (encode.tv_nsec - start.tv_nsec) / 1000000.0;
+	double encode_send_ms = (encode_send.tv_nsec - start.tv_nsec) / 1000000.0;
+
+	printf("encoded in %f ms, encoded/sent in %f ms\n", encode_ms, encode_send_ms);
 
 	return NHVE_OK;
 }
