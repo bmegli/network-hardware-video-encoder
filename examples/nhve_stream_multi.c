@@ -80,7 +80,6 @@ int streaming_loop(struct nhve *streamer)
 	int f;
 	struct nhve_frame frames[2] = { 0 };
 	
-
 	//we are working with NV12 because we specified nv12 pixel formats
 	//when calling nhve_multi_init, in principle we could use other format
 	//if hardware supported it (e.g. RGB0 is supported on my Intel)
@@ -104,19 +103,24 @@ int streaming_loop(struct nhve *streamer)
 		frames[0].data[0]=Y1;
 		frames[0].data[1]=color;
 
+		//encode and send this frame, subframe 0
+		if(nhve_send(streamer, &frames[0], 0) != NHVE_OK)
+			break; //break on error
+
 		frames[1].data[0]=Y2;
 		frames[1].data[1]=color;
-		
-		//encode and send this frame, the framenumber f has to increase
-		if(nhve_send(streamer, f, frames) != NHVE_OK)
+
+		//encode and send this frame, subframe 1
+		if(nhve_send(streamer, &frames[1], 1) != NHVE_OK)
 			break; //break on error
 
 		//simulate real time source (sleep according to framerate)
 		usleep(useconds_per_frame);
 	}
 
-	//flush the encoder by sending NULL frame, encode some last frames returned from hardware
-	nhve_send(streamer, f, NULL);
+	//flush the encoder by sending NULL frame, encode last frame(s) returned from hardware
+	nhve_send(streamer, NULL, 0);
+	nhve_send(streamer, NULL, 1);
 
 	//did we encode everything we wanted?
 	//convention 0 on success, negative on failure

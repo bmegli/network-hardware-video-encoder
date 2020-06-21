@@ -94,8 +94,8 @@ int streaming_loop(struct nhve *streamer)
 		frame.data[0] = (uint8_t*)Y;
 		frame.data[1] = (uint8_t*)color;
 
-		//encode and send this frame, the framenumber f has to increase
-		if(nhve_send(streamer, f, &frame) != NHVE_OK)
+		//encode and send this frame
+		if(nhve_send(streamer, &frame, 0) != NHVE_OK)
 			break; //break on error
 
 		//simulate real time source (sleep according to framerate)
@@ -103,7 +103,7 @@ int streaming_loop(struct nhve *streamer)
 	}
 
 	//flush the encoder by sending NULL frame, encode some last frames returned from hardware
-	nhve_send(streamer, f, NULL);
+	nhve_send(streamer, NULL, 0);
 
 	//did we encode everything we wanted?
 	//convention 0 on success, negative on failure

@@ -130,12 +130,12 @@ while(keep_streaming)
 	frame.data[1]=color; //dummy UV plane
 	
 	//encode and send this frame
-	if( nhve_send(streamer, framenumber++, &frame) != NHVE_OK)
+	if( nhve_send(streamer, &frame, 0) != NHVE_OK)
 		break; //break on error
 }
 
 //flush the streamer by sending NULL frame
-nhve_send(streamer, framenumber, NULL);
+nhve_send(streamer, NULL, 0);
 
 nhve_close(streamer);
 ```
@@ -144,7 +144,7 @@ That's it! You have just seen all the functions and data types in the library.
 
 The same interface works for multi-frame streaming with:
 - array of hardware configurations in `nhve_init`
-- array of frames in `nhve_send`
+- `nhve_send(streamer, &frame0, 0)`, `mlsp_send(streamer, &frame1, 1)`, ...
 
 ## Compiling your code
 

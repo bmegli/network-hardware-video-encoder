@@ -36,7 +36,7 @@ static int NHVE_ERROR_MSG(const char *msg);
 struct nhve *nhve_init(const struct nhve_net_config *net_config,const struct nhve_hw_config *hw_config, int hw_size)
 {
 	struct nhve *n, zero_nhve = {0};
-	struct mlsp_config mlsp_cfg = {net_config->ip, net_config->port, 0};
+	struct mlsp_config mlsp_cfg = {net_config->ip, net_config->port, 0, hw_size};
 
 	if(hw_size > NHVE_MAX_ENCODERS)
 		return nhve_close_and_return_null(NULL, "the maximum number of encoders (compile time) exceeded");
@@ -85,63 +85,59 @@ void nhve_close(struct nhve *n)
 	free(n);
 }
 
-//NULL frames to flush all encoders
-//NULL frames[i].data[0] is legal and silently skipped
-//this is necessary to support multiple encoders with e.g. different B frames
-int nhve_send(struct nhve *n, uint16_t framenumber, struct nhve_frame *frames)
+
+//3 scenarios:
+//NULL frame - flush encoder
+//non NULL frame and non NULL frame->data[0] - encode and send (typical)
+//non NULL frame and NULL frame->data[0] - send empty frame
+//this is necessary to support e.g. different framerates or B frames in multi-frame scenario
+int nhve_send(struct nhve *n, const struct nhve_frame *frame, uint8_t subframe)
 {
-	struct hve_frame video_frames[NHVE_MAX_ENCODERS] = {0};
-	const int encoders = n->hardware_encoders_size;
+	struct hve_frame video_frame = {0};
+	struct mlsp_frame network_frame = {0};
 
-	if(frames) //NULL frames is valid input - flush the encoders
-		for(int i=0;i<encoders;++i)
-		{	//copy pointers to data and linesizes (just a few bytes)
-			memcpy(video_frames[i].data, frames[i].data, sizeof(frames[i].data));
-			memcpy(video_frames[i].linesize, frames[i].linesize, sizeof(frames[i].linesize));
-		}
+	if(!frame) //NULL frame is valid input - flush the encoder
+		if( hve_send_frame(n->hardware_encoder[subframe], NULL) != HVE_OK)
+			return NHVE_ERROR_MSG("failed to send flush frame to hardware");
 
-	for(int i=0;i<encoders;++i)
+	if(frame)
 	{
-		if(!frames) //flush all encoders
-			if( hve_send_frame(n->hardware_encoder[i], NULL) != HVE_OK)
-				return NHVE_ERROR_MSG("failed to send flush frame to hardware");
+		if( !frame->data[0] ) //empty data, send empty MLSP frame
+		{
+			if( mlsp_send(n->network_streamer, &network_frame, subframe) != MLSP_OK)
+				return NHVE_ERROR_MSG("failed to send frame");
 
-		//sending data only to selected encoders is legal and will not result in flushing
-		if( video_frames[i].data[0] && (hve_send_frame(n->hardware_encoder[i], &video_frames[i]) != HVE_OK) )
+			return NHVE_OK;
+		}
+		//copy pointers to data planes and linesizes (just a few bytes)
+		memcpy(video_frame.data, frame->data, sizeof(frame->data));
+		memcpy(video_frame.linesize, frame->linesize, sizeof(frame->linesize));
+
+		if( hve_send_frame(n->hardware_encoder[subframe], &video_frame) != HVE_OK )
 			return NHVE_ERROR_MSG("failed to send frame to hardware");
 	}
 
-	AVPacket *encoded_frames[NHVE_MAX_ENCODERS];
-	int failed[NHVE_MAX_ENCODERS] = {0};
-	int keep_working;
+	AVPacket *encoded_frame;
+	int failed;
 
-	//while any of encoders still produces data we should send frames
-	do
+	//the only scenario when we get more than 1 frame is flushing
+	//in such case we send only first encoded frame and drain the rest
+	//otherwise the receiving side will not collect packet in multi-frame scenario
+	while( (encoded_frame = hve_receive_packet(n->hardware_encoder[subframe], &failed)) )
 	{
-		struct mlsp_frame network_frame = {0};
+		if(network_frame.data)
+			continue; //if we already sent something (flushing), ignore the rest of data
 
-		keep_working = 0;
+		network_frame.data = encoded_frame->data;
+		network_frame.size = encoded_frame->size;
 
-		for(int i=0;i<encoders;++i)
-			if( (encoded_frames[i] = hve_receive_packet(n->hardware_encoder[i], &failed[i])) )
-			{
-				network_frame.data[i] = encoded_frames[i]->data;
-				network_frame.size[i] = encoded_frames[i]->size;
-				//this should be increased with every frame, otherwise the world will explode
-				//this means that it not good for flushing now
-				network_frame.framenumber = framenumber;
-				keep_working = 1; //some encoder still produces output
-			}
-
-		if(keep_working && (mlsp_send(n->network_streamer, &network_frame) != MLSP_OK) )
+		if( mlsp_send(n->network_streamer, &network_frame, subframe) != MLSP_OK)
 			return NHVE_ERROR_MSG("failed to send frame");
-
-	} while(keep_working);
+	}
 
 	//NULL packet and non-zero failed indicates failure during encoding
-	for(int i=0;i<encoders;++i)
-		if(failed[i] != HVE_OK)
-			return NHVE_ERROR_MSG("failed to encode frame");
+	if(failed != HVE_OK)
+		return NHVE_ERROR_MSG("failed to encode frame");
 
 	return NHVE_OK;
 }

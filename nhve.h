@@ -63,11 +63,10 @@ void nhve_close(struct nhve *n);
 
 //NHVE_OK on success, NHVE_ERROR on error
 
-//NULL frames to flush all encoders
-//NULL frames[i].data[0] is legal, silently skipped and will not flush the encoder
-//this is necessary to support e.g. different framerates or B frames
-int nhve_send(struct nhve *n, uint16_t framenumber, struct nhve_frame *frames);
-
+//NULL frame to flush encoder
+//NULL frame.data is legal, results in sending empty frame
+//this is necessary to support e.g. different framerates or B frames in multi-frame scenario
+int nhve_send(struct nhve *n, const struct nhve_frame *frame, uint8_t subframe);
 
 #ifdef __cplusplus
 }
