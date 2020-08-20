@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 	struct nhve *streamer;
 
 	//initialize library with nhve_init
-	if( (streamer = nhve_init(&net_config, &hw_config, 1)) == NULL )
+	if( (streamer = nhve_init(&net_config, &hw_config, 1, 0)) == NULL )
 		return hint_user_on_failure(argv);
 
 	//do the actual encoding

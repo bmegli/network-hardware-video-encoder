@@ -1,6 +1,5 @@
 /*
- * NHVE Network Hardware Video Encoder library example of
- * streaming with multiple simultanous hardware encoders
+ * NHVE Network Hardware Video Encoder library example of streaming H.264
  *
  * Copyright 2019-2020 (C) Bartosz Meglicki <meglickib@gmail.com>
  *
@@ -17,7 +16,7 @@
 #include "../nhve.h"
 
 const char *IP; //e.g "127.0.0.1"
-unsigned short PORT; //e.g. 9667 
+unsigned short PORT; //e.g. 9667
 
 const int WIDTH=640;
 const int HEIGHT=360;
@@ -28,13 +27,14 @@ const char *ENCODER=NULL;//NULL for default (h264_vaapi) or FFmpeg encoder e.g. 
 const char *PIXEL_FORMAT="nv12"; //NULL / "" for default (NV12) or pixel format e.g. "rgb0"
 const int PROFILE=FF_PROFILE_H264_HIGH; //or FF_PROFILE_H264_MAIN, FF_PROFILE_H264_CONSTRAINED_BASELINE, ...
 const int BFRAMES=0; //max_b_frames, set to 0 to minimize latency, non-zero to minimize size
-const int BITRATE1=500000; //average bitrate in VBR mode (bit_rate != 0 and qp == 0)
-const int BITRATE2=2000000; //average bitrate in VBR mode (bit_rate != 0 and qp == 0)
+const int BITRATE=0; //average bitrate in VBR mode (bit_rate != 0 and qp == 0)
 const int QP=0; //quantization parameter in CQP mode (qp != 0 and bit_rate == 0)
 const int GOP_SIZE=0; //group of pictures size, 0 for default (determines keyframe period)
 const int COMPRESSION_LEVEL=0; //speed-quality tradeoff, 0 for default, 1 for the highest quality, 7 for the fastest
 
 //IP, PORT, SECONDS and DEVICE are read from user input
+
+const int AUX_BUFFER_SIZE = 80; //buffer size for preparing auxiliary data
 
 int streaming_loop(struct nhve *streamer);
 int process_user_input(int argc, char* argv[]);
@@ -49,17 +49,12 @@ int main(int argc, char* argv[])
 
 	//prepare library data
 	struct nhve_net_config net_config = {IP, PORT};
-	
-	struct nhve_hw_config hw_config[2] = 
-	{  //those could be completely different encoders using different hardware, here just different bitrate
-		{WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE1, QP, GOP_SIZE, COMPRESSION_LEVEL},
-		{WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE2, QP, GOP_SIZE, COMPRESSION_LEVEL}
-	};
-
+	struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER,
+			PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE, QP, GOP_SIZE, COMPRESSION_LEVEL};
 	struct nhve *streamer;
 
-	//initialize library with nhve_multi_init
-	if( (streamer = nhve_init(&net_config, hw_config, 2, 0)) == NULL )
+	//initialize library with nhve_init (1 video channel, 1 auxiliary channel)
+	if( (streamer = nhve_init(&net_config, &hw_config, 1, 1)) == NULL )
 		return hint_user_on_failure(argv);
 
 	//do the actual encoding
@@ -75,56 +70,58 @@ int main(int argc, char* argv[])
 
 int streaming_loop(struct nhve *streamer)
 {
-	const int TOTAL_FRAMES = SECONDS*FRAMERATE;
+	struct nhve_frame frame = { 0 };
+	char aux_data_buffer[AUX_BUFFER_SIZE];
+
+	int frames=SECONDS*FRAMERATE, f;
 	const useconds_t useconds_per_frame = 1000000/FRAMERATE;
-	int f;
-	struct nhve_frame frames[2] = { 0 };
-	
-	//we are working with NV12 because we specified nv12 pixel formats
-	//when calling nhve_multi_init, in principle we could use other format
+
+	//we are working with NV12 because we specified nv12 pixel format
+	//when calling nhve_init, in principle we could use other format
 	//if hardware supported it (e.g. RGB0 is supported on my Intel)
-	uint8_t Y1[WIDTH*HEIGHT]; //dummy NV12 luminance data for encoder 1
-	uint8_t Y2[WIDTH*HEIGHT]; //                          for encoder 2
+	uint8_t Y[WIDTH*HEIGHT]; //dummy NV12 luminance data
+	uint8_t color[WIDTH*HEIGHT/2]; //dummy NV12 color data
 
-	uint8_t color[WIDTH*HEIGHT/2]; //same dummy NV12 color data for both encoders
-
-	//fill with your stride (width including padding if any)
-	frames[0].linesize[0] = frames[1].linesize[0] = WIDTH; //Y planes stride
-	frames[0].linesize[1] = frames[1].linesize[1] = WIDTH; //UV planes stride 
-
-	for(f=0;f<TOTAL_FRAMES;++f)
+	for(f=0;f<frames;++f)
 	{
-		//prepare dummy images data, normally you would take it from cameras or other source
-		memset(Y1, f % 255, WIDTH*HEIGHT); //NV12 luminance (ride through greyscale)
-		memset(Y2, 255 - (f % 255), WIDTH*HEIGHT); //NV12 luminance (reverse ride through greyscale)
+		//prepare dummy image date, normally you would take it from camera or other source
+		memset(Y, f % 255, WIDTH*HEIGHT); //NV12 luminance (ride through greyscale)
 		memset(color, 128, WIDTH*HEIGHT/2); //NV12 UV (no color really)
 
-		//fill nhve_frame with pointers to your data in NV12 pixel format
-		frames[0].data[0]=Y1;
-		frames[0].data[1]=color;
+		//fill with your stride (width including padding if any)
+		frame.linesize[0] = frame.linesize[1] = WIDTH;
 
-		//encode and send this frame, subframe 0
-		if(nhve_send(streamer, &frames[0], 0) != NHVE_OK)
+		//fill nhve_frame with pointers to your data in NV12 pixel format
+		frame.data[0]=Y;
+		frame.data[1]=color;
+
+		//encode and send this frame
+		if(nhve_send(streamer, &frame, 0) != NHVE_OK)
 			break; //break on error
 
-		frames[1].data[0]=Y2;
-		frames[1].data[1]=color;
+		//prepare dummy auxiliary data
+		int size = snprintf(aux_data_buffer, AUX_BUFFER_SIZE, "hello world from frame %d", f);
 
-		//encode and send this frame, subframe 1
-		if(nhve_send(streamer, &frames[1], 1) != NHVE_OK)
+		//fill nhve_frame with pointer and size of your raw data
+		//only data[0] and linesize[0] is considered for auxiliary data
+		frame.data[0] = aux_data_buffer;
+		frame.linesize[0] = size + 1;
+
+		if(nhve_send(streamer, &frame, 1) != NHVE_OK)
 			break; //break on error
 
 		//simulate real time source (sleep according to framerate)
 		usleep(useconds_per_frame);
 	}
 
-	//flush the encoder by sending NULL frame, encode last frame(s) returned from hardware
+	//flush the encoder by sending NULL frame, encode some last frames returned from hardware
 	nhve_send(streamer, NULL, 0);
+	//send also auxiliary data (here sending empty frame)
 	nhve_send(streamer, NULL, 1);
 
 	//did we encode everything we wanted?
 	//convention 0 on success, negative on failure
-	return f == TOTAL_FRAMES ? 0 : -1;
+	return f == frames ? 0 : -1;
 }
 
 int process_user_input(int argc, char* argv[])
@@ -137,7 +134,7 @@ int process_user_input(int argc, char* argv[])
 		fprintf(stderr, "%s 127.0.0.1 9766 10 /dev/dri/renderD128\n", argv[0]);
 		return -1;
 	}
-	
+
 	IP = argv[1];
 	PORT = atoi(argv[2]);
 	SECONDS = atoi(argv[3]);

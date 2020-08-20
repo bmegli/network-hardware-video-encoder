@@ -28,15 +28,19 @@ struct nhve
 	struct mlsp *network_streamer;
 	struct hve *hardware_encoder[NHVE_MAX_ENCODERS];
 	int hardware_encoders_size;
+	int auxiliary_channels_size;
 };
+
+static int nhve_send_video(struct nhve *n, const struct nhve_frame *frame, uint8_t subframe);
+static int nhve_send_auxiliary(struct nhve *n, const struct nhve_frame *frame, uint8_t subframe);
 
 static struct nhve *nhve_close_and_return_null(struct nhve *n, const char *msg);
 static int NHVE_ERROR_MSG(const char *msg);
 
-struct nhve *nhve_init(const struct nhve_net_config *net_config,const struct nhve_hw_config *hw_config, int hw_size)
+struct nhve *nhve_init(const struct nhve_net_config *net_config,const struct nhve_hw_config *hw_config, int hw_size, int aux_size)
 {
 	struct nhve *n, zero_nhve = {0};
-	struct mlsp_config mlsp_cfg = {net_config->ip, net_config->port, 0, hw_size};
+	struct mlsp_config mlsp_cfg = {net_config->ip, net_config->port, 0, hw_size + aux_size};
 
 	if(hw_size > NHVE_MAX_ENCODERS)
 		return nhve_close_and_return_null(NULL, "the maximum number of encoders (compile time) exceeded");
@@ -50,6 +54,7 @@ struct nhve *nhve_init(const struct nhve_net_config *net_config,const struct nhv
 		return nhve_close_and_return_null(n, "failed to initialize network client");
 
 	n->hardware_encoders_size = hw_size;
+	n->auxiliary_channels_size = aux_size;
 
 	for(int i=0;i<hw_size;++i)
 	{
@@ -85,13 +90,23 @@ void nhve_close(struct nhve *n)
 	free(n);
 }
 
+int nhve_send(struct nhve *n, const struct nhve_frame *frame, uint8_t subframe)
+{
+	if(subframe >= n->hardware_encoders_size + n->auxiliary_channels_size)
+		return NHVE_ERROR_MSG("subframe exceeds configured video/aux channels");
+
+	if(subframe < n->hardware_encoders_size)
+		return nhve_send_video(n, frame, subframe);
+
+	return nhve_send_auxiliary(n, frame, subframe);
+}
 
 //3 scenarios:
 //NULL frame - flush encoder
 //non NULL frame and non NULL frame->data[0] - encode and send (typical)
 //non NULL frame and NULL frame->data[0] - send empty frame
 //this is necessary to support e.g. different framerates or B frames in multi-frame scenario
-int nhve_send(struct nhve *n, const struct nhve_frame *frame, uint8_t subframe)
+static int nhve_send_video(struct nhve *n, const struct nhve_frame *frame, uint8_t subframe)
 {
 	struct hve_frame video_frame = {0};
 	struct mlsp_frame network_frame = {0};
@@ -138,6 +153,22 @@ int nhve_send(struct nhve *n, const struct nhve_frame *frame, uint8_t subframe)
 	//NULL packet and non-zero failed indicates failure during encoding
 	if(failed != HVE_OK)
 		return NHVE_ERROR_MSG("failed to encode frame");
+
+	return NHVE_OK;
+}
+
+static int nhve_send_auxiliary(struct nhve *n, const struct nhve_frame *frame, uint8_t subframe)
+{
+	struct mlsp_frame network_frame = {0};
+	//empty frames are legal and result in sending 0 size frames
+	if(frame && frame->data[0])
+	{
+		network_frame.data = frame->data[0];
+		network_frame.size = frame->linesize[0];
+	}
+
+	if( mlsp_send(n->network_streamer, &network_frame, subframe) != MLSP_OK)
+		return NHVE_ERROR_MSG("failed to send aux frame");
 
 	return NHVE_OK;
 }

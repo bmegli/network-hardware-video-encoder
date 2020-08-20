@@ -10,6 +10,7 @@ The intent behind library:
 - minimize video latency
 - minimize CPU usage (hardware encoding and color conversions)
 - multi-frame streaming (e.g. depth + texture)
+- auxiliary data channels (e.g. IMU, odometry, metadata)
 - simple user interface
 
 If you have no specific needs you should start with gstreamer or FFmpeg command line streaming instead.
@@ -73,19 +74,21 @@ make
 Stream procedurally generated H.264/HEVC video over UDP (moving through greyscale)
 
 ```bash
-# Usage: ./nhve-stream-h* <ip> <port> <seconds> [device]
+# Usage: ./nhve-stream-* <ip> <port> <seconds> [device]
 ./nhve-stream-h264 127.0.0.1 9766 10
 ./nhve-stream-hevc10 127.0.0.1 9766 10
 ./nhve-stream-multi 127.0.0.1 9766 10
+./nhve-stream-h264-aux 127.0.0.1 9766 10
 ```
 
 You may need to specify VAAPI device if you have more than one (e.g. NVIDIA GPU + Intel CPU).
 
 ```bash
-# Usage: ./nhve-stream-h* <ip> <port> <seconds> [device]
+# Usage: ./nhve-stream-* <ip> <port> <seconds> [device]
 ./nhve-stream-h264 127.0.0.1 9766 10 /dev/dri/renderD128 #or D129
 ./nhve-stream-hevc10 127.0.0.1 9766 10 /dev/dri/renderD128 #or D129
 ./nhve-stream-multi 127.0.0.1 9766 10 /dev/dri/renderD128 #or D129
+./nhve-stream-h264-aux 127.0.0.1 9766 10 /dev/dri/renderD128 #or D129
 ```
 
 If you don't have receiving end you will just see if hardware encoding worked.
@@ -105,7 +108,7 @@ struct nhve_net_config net_config = {IP, PORT};
 struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER,
 	PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE, QP, GOP_SIZE, COMPRESSION_LEVEL};
 //initialize single hardware encoder
-struct nhve *streamer = nhve_init(&net_config, &hw_config, 1);
+struct nhve *streamer = nhve_init(&net_config, &hw_config, 1, 0);
 
 struct nhve_frame frame = { 0 };
 
@@ -144,7 +147,11 @@ That's it! You have just seen all the functions and data types in the library.
 
 The same interface works for multi-frame streaming with:
 - array of hardware configurations in `nhve_init`
-- `nhve_send(streamer, &frame0, 0)`, `mlsp_send(streamer, &frame1, 1)`, ...
+- `nhve_send(streamer, &frame0, 0)`, `nhve_send(streamer, &frame1, 1)`, ...
+
+The same interface works for non-video (raw) data streaming with:
+- number of auxiliary channels in `nhve_init`
+- `nhve_send` with `frame.data[0]` of size `frame.linesize[0]` raw data
 
 ## Compiling your code
 
