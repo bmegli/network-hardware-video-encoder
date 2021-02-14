@@ -16,7 +16,7 @@ add_library(nhve nhve.c)
 target_include_directories(nhve PRIVATE hardware-video-encoder)
 target_include_directories(nhve PRIVATE minimal-latency-streaming-protocol)
 
-# note that nhve depends through hve on FFMpeg avcodec and avutil, at least 3.4 version
+# note that nhve depends through hve on FFMpeg avcodec, avutil and avfilter at least 3.4 version
 target_link_libraries(nhve hve mlsp)
 
 # examples

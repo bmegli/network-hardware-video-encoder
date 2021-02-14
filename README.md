@@ -36,7 +36,7 @@ Tested on LattePanda Alpha and i7-7820HK laptop.
 
 Library depends on:
 - [HVE Hardware Video Encoder](https://github.com/bmegli/hardware-video-encoder)
-	- FFmpeg `avcodec` and `avutil` (at least 3.4 version)
+	- FFmpeg `avcodec`, `avutil`, `avfilter` (at least 3.4 version)
 - [MLSP Minimal Latency Streaming Protocol](https://github.com/bmegli/minimal-latency-streaming-protocol)
 
 HVE and MLSP are included as submodules so you only need to satifisy HVE dependencies.
@@ -51,7 +51,7 @@ Tested on Ubuntu 18.04.
 # update package repositories
 sudo apt-get update 
 # get avcodec and avutil
-sudo apt-get install ffmpeg libavcodec-dev libavutil-dev
+sudo apt-get install ffmpeg libavcodec-dev libavutil-dev libavfilter-dev
 # get compilers and make 
 sudo apt-get install build-essential
 # get cmake - we need to specify libcurl4 for Ubuntu 18.04 dependencies problem
@@ -157,7 +157,7 @@ The same interface works for non-video (raw) data streaming with:
 
 ### IDE (recommended)
 
-The simplest way is to copy headers and sources of HVE, MLSP and NHVE to your project and link with avcodec & avutil.
+The simplest way is to copy headers and sources of HVE, MLSP and NHVE to your project and link with avcodec, avutil and avfilter.
 
 ### CMake
 
@@ -174,7 +174,7 @@ This is similiar to LGPL but more permissive:
 Like in LGPL, if you modify this library, you have to make your changes available.
 Making a github fork of the library with your changes satisfies those requirements perfectly.
 
-Since you are linking to FFmpeg libraries consider also `avcodec` and `avutil` licensing.
+Since you are linking to FFmpeg libraries consider also `avcodec`, `avutil` and `avfilter` licensing.
 
 ## Additional information
 
