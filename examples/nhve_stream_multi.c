@@ -33,6 +33,7 @@ const int BITRATE2=2000000; //average bitrate in VBR mode (bit_rate != 0 and qp 
 const int QP=0; //quantization parameter in CQP mode (qp != 0 and bit_rate == 0)
 const int GOP_SIZE=0; //group of pictures size, 0 for default (determines keyframe period)
 const int COMPRESSION_LEVEL=0; //speed-quality tradeoff, 0 for default, 1 for the highest quality, 7 for the fastest
+const int LOW_POWER=0; //alternative limited low-power encoding path if non-zero
 
 //IP, PORT, SECONDS and DEVICE are read from user input
 
@@ -52,8 +53,8 @@ int main(int argc, char* argv[])
 	
 	struct nhve_hw_config hw_config[2] = 
 	{  //those could be completely different encoders using different hardware, here just different bitrate
-		{WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE1, QP, GOP_SIZE, COMPRESSION_LEVEL},
-		{WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE2, QP, GOP_SIZE, COMPRESSION_LEVEL}
+		{WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE1, QP, GOP_SIZE, COMPRESSION_LEVEL, LOW_POWER},
+		{WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER, PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE2, QP, GOP_SIZE, COMPRESSION_LEVEL, LOW_POWER}
 	};
 
 	struct nhve *streamer;

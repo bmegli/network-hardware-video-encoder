@@ -16,7 +16,7 @@
 #include "../nhve.h"
 
 const char *IP; //e.g "127.0.0.1"
-unsigned short PORT; //e.g. 9667 
+unsigned short PORT; //e.g. 9667
 
 const int WIDTH=640;
 const int HEIGHT=360;
@@ -31,6 +31,7 @@ const int BITRATE=0; //average bitrate in VBR mode (bit_rate != 0 and qp == 0)
 const int QP=0; //quantization parameter in CQP mode (qp != 0 and bit_rate == 0)
 const int GOP_SIZE=0; //group of pictures size, 0 for default (determines keyframe period)
 const int COMPRESSION_LEVEL=0; //speed-quality tradeoff, 0 for default, 1 for the highest quality, 7 for the fastest
+const int LOW_POWER=0; //alternative limited low-power encoding path if non-zero
 
 //IP, PORT, SECONDS and DEVICE are read from user input
 
@@ -48,7 +49,8 @@ int main(int argc, char* argv[])
 	//prepare library data
 	struct nhve_net_config net_config = {IP, PORT};
 	struct nhve_hw_config hw_config = {WIDTH, HEIGHT, FRAMERATE, DEVICE, ENCODER,
-			PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE, QP, GOP_SIZE, COMPRESSION_LEVEL};
+                                           PIXEL_FORMAT, PROFILE, BFRAMES, BITRATE,
+	                                   QP, GOP_SIZE, COMPRESSION_LEVEL, LOW_POWER};
 	struct nhve *streamer;
 
 	//initialize library with nhve_init

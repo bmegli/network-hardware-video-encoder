@@ -49,6 +49,7 @@ struct nhve_hw_config
 	int qp; //!< quantization parameter in CQP mode (qp != 0 and bit_rate == 0)
 	int gop_size; //!<  group of pictures size, 0 for default, -1 for intra only
 	int compression_level; //!< speed-quality tradeoff, 0 for default, 1 for the highest quality, 7 for the fastest
+	int low_power; //!< alternative limited low-power encoding if non-zero
 };
 
 /**

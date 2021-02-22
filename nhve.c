@@ -61,7 +61,7 @@ struct nhve *nhve_init(const struct nhve_net_config *net_config,const struct nhv
 		struct hve_config hve_cfg = {hw_config[i].width, hw_config[i].height, hw_config[i].width, hw_config[i].height,
 		hw_config[i].framerate, hw_config[i].device, hw_config[i].encoder, hw_config[i].pixel_format,
 		hw_config[i].profile, hw_config[i].max_b_frames, hw_config[i].bit_rate, hw_config[i].qp, hw_config[i].gop_size,
-		hw_config[i].compression_level};
+		hw_config[i].compression_level, hw_config[i].low_power};
 
 		if( (n->hardware_encoder[i] = hve_init(&hve_cfg)) == NULL )
 			return nhve_close_and_return_null(n, "failed to initalize hardware encoder");
